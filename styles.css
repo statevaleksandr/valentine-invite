@@ -72,26 +72,29 @@ body{
   gap: 14px;
   user-select:none;
   will-change: transform, opacity;
+  align-items: center;   /* центрирует дочерние элементы по горизонтали */
+  text-align: center;
 }
 
 h1{
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   font-size: clamp(24px, 3.2vw, 34px);
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 p{
-  margin: 0;
+  margin: 0.5;
   color: var(--muted);
   font-size: 16px;
   line-height: 1.55;
+  opacity: 0.5
 }
 
 .spacer{ height: 4px; }
 
 .btn{
-  margin-top: 18px;
+  margin-top: 4px;
   align-self: start;
   border: 0;
   border-radius: 999px;
@@ -102,9 +105,17 @@ p{
   color: white;
   box-shadow: 0 12px 30px rgba(255,79,163,.35);
   transition: transform .12s ease, filter .12s ease;
+  align-self: center;
 }
 .btn:hover{ transform: translateY(-1px); filter: brightness(1.02); }
 .btn:active{ transform: translateY(1px) scale(.99); }
+
+.btn-row{
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
 
 .field{
   margin-top: 12px;
@@ -122,16 +133,19 @@ input[type="text"]{
   outline: none;
   background: rgba(255,255,255,.9);
   transition: border-color .15s ease, box-shadow .15s ease;
+  
 }
 input[type="text"]:focus{
   border-color: rgba(255,79,163,.6);
   box-shadow: 0 0 0 6px rgba(255,79,163,.14);
+  opacity:0.8
 }
 
 .hint{
   font-size: 13px;
   color: rgba(42,27,36,.55);
-  margin-top: 4px;
+  margin-top: 50px;
+  opacity:0.5
 }
 
 .status{
@@ -160,6 +174,11 @@ input[type="text"]:focus{
 .tap-to-continue.show{
   opacity: 1;
   transform: translateY(0);
+}
+input[type="text"]::placeholder{
+  color: rgba(42, 27, 36, 0.45); /* прозрачность через alpha */
+  opacity: 1; 
+  font-size:16px                   /* важно для Firefox (иначе он сам занижает) */
 }
 
 /* Появление карточки */
