@@ -1,8 +1,8 @@
 // ================== НАСТРОЙКИ ==================
 const AUDIO_SRC = "music.mp3";
 
-// 2+ варианта правильного ответа (заполни)
-const CORRECT_ANSWERS = ["justin bieber", "джастин бибер"]; // например: ["котик", "котёнок"]
+// 2+ варианта правильного ответа
+const CORRECT_ANSWERS = ["justin bieber", "джастин бибер"];
 
 // Google Form endpoint (ВАЖНО: /formResponse)
 const FORM_RESPONSE_URL =
@@ -10,16 +10,16 @@ const FORM_RESPONSE_URL =
 
 // entry.* из твоей предзаполненной ссылки
 const FORM_FIELDS = {
-  sessionId:     "entry.53703048",     // AAA
-  questionId:    "entry.944260219",    // BBB
-  questionTitle: "entry.960165383",    // CCC
-  answerText:    "entry.378002717",    // DDD
-  answerChoice:  "entry.1420466812",   // EEE
-  answerMulti:   "entry.966787247",    // FFF
-  isCorrect:     "entry.580079395",    // GGG
+  sessionId:     "entry.53703048",
+  questionId:    "entry.944260219",
+  questionTitle: "entry.960165383",
+  answerText:    "entry.378002717",
+  answerChoice:  "entry.1420466812",
+  answerMulti:   "entry.966787247",
+  isCorrect:     "entry.580079395",
 };
 
-// Доп. поле для идентификации сессии (один ID на всё прохождение)
+// ID прохождения (один на всю сессию)
 const SESSION_ID = crypto.randomUUID();
 
 // ================== АУДИО ==================
@@ -36,6 +36,7 @@ const clickCatcher = document.getElementById("clickCatcher");
 // ================== STATE ==================
 let step = 0;
 let canAdvance = false;
+let isTransitioning = false;
 
 // ================== GOOGLE FORMS SUBMIT ==================
 function submitRowToGoogleForm(row) {
@@ -77,7 +78,7 @@ function submitRowToGoogleForm(row) {
   setTimeout(() => {
     form.remove();
     iframe.remove();
-  }, 2000);
+  }, 1500);
 }
 
 // 1 строка на вопрос — сохранить только один раз
@@ -102,6 +103,36 @@ function createQuestionSaver({ questionId, questionTitle }) {
   };
 }
 
+// ================== ЛОГИКА ПЕРЕХОДА (плавный слайд) ==================
+function slideOut(currentCardEl, onDone) {
+  if (isTransitioning) return;
+  isTransitioning = true;
+
+  currentCardEl.classList.remove("slide-out");
+  // перезапуск анимации
+  void currentCardEl.offsetWidth;
+  currentCardEl.classList.add("slide-out");
+
+  const finish = () => {
+    currentCardEl.removeEventListener("animationend", finish);
+    currentCardEl.classList.remove("slide-out");
+    isTransitioning = false;
+    onDone?.();
+  };
+
+  currentCardEl.addEventListener("animationend", finish, { once: true });
+  // страховка на случай, если animationend не придёт
+  setTimeout(finish, 450);
+}
+
+function nextCard() {
+  if (step >= cards.length - 1) return;
+  slideOut(cardEl, () => {
+    step++;
+    renderCurrentCard();
+  });
+}
+
 // ================== КАРТОЧКИ ==================
 const cards = [
   {
@@ -122,7 +153,7 @@ const cards = [
         btn?.addEventListener("click", async (e) => {
           e.stopPropagation();
           try { await audio.play(); } catch (_) {}
-          nextCard();
+          nextCard(); // переход только по нажатию на кнопку
         });
       }, 0);
 
@@ -145,7 +176,7 @@ const cards = [
         <div class="field">
           <input id="answerInput" type="text" placeholder="Введи ответ…" autocomplete="off" />
           <div class="status" id="status"></div>
-          <div class="hint">Подсказку потом уберём 😉</div>
+          <div class="hint">Нажми на свободное место экрана, чтобы перейти дальше.</div>
         </div>
       `;
 
@@ -154,7 +185,6 @@ const cards = [
         const status = document.getElementById("status");
         input?.focus();
 
-        // сохраняем 1 строку на вопрос при уходе с карточки
         const saveQ1Once = createQuestionSaver({
           questionId: "q1",
           questionTitle: "Мини-вопрос",
@@ -163,27 +193,33 @@ const cards = [
         let lastValue = "";
         let isCorrectNow = false;
 
-        // Переход дальше: сначала сохранить строку, потом анимация/следующая карточка
         const goNext = () => {
+          // Переход ТОЛЬКО по касанию (тапу) и только если ответ верный
+          if (!canAdvance || isTransitioning) return;
+
+          // Сохраняем 1 строку на вопрос (последний ввод)
           saveQ1Once({
-            answerText: lastValue,   // последний введённый “черновик/финал”
+            answerText: lastValue,
             answerChoice: "",
             answerMulti: [],
             isCorrect: isCorrectNow,
           });
+
           nextCard();
         };
 
-        // локальные обработчики клика "продолжить" на этой карточке
-        const onContinueClick = (e) => {
-          if (!canAdvance) return;
-          if (e?.target && (e.target.tagName === "INPUT" || e.target.closest("input"))) return;
+        // Тап по свободной области
+        const onContinueTap = (e) => {
+          // не реагируем на тап по инпуту/кнопкам внутри карточки
+          if (e?.target && (e.target.tagName === "INPUT" || e.target.closest("input") || e.target.closest("button"))) {
+            return;
+          }
           goNext();
         };
 
-        // Подключаем на время этой карточки
-        clickCatcher.onclick = onContinueClick;
-        deck.onclick = onContinueClick;
+        // Включаем возможность тапнуть “вне карточки”, когда ответ верный
+        clickCatcher.onclick = onContinueTap;
+        deck.onclick = onContinueTap;
 
         input?.addEventListener("input", () => {
           lastValue = input.value;
@@ -240,36 +276,6 @@ function renderCurrentCard() {
   requestAnimationFrame(() => cardEl.classList.add("deal-in"));
 }
 
-// ================== ПЕРЕХОД “СТЕКЛО” ==================
-// ================== ПЛАВНЫЙ СЛАЙД (вместо “осколков”) ==================
-function slideOut(currentCardEl, onDone) {
-  // сброс класса, чтобы анимация могла проигрываться снова
-  currentCardEl.classList.remove("slide-out");
-  // принудительный reflow
-  void currentCardEl.offsetWidth;
-  currentCardEl.classList.add("slide-out");
-
-  const finish = () => {
-    currentCardEl.removeEventListener("animationend", finish);
-    currentCardEl.classList.remove("slide-out");
-    onDone?.();
-  };
-
-  currentCardEl.addEventListener("animationend", finish, { once: true });
-  // страховка на случай, если animationend не придёт
-  setTimeout(finish, 450);
-}
-
-function nextCard() {
-  if (step >= cards.length - 1) return;
-
-  slideOut(cardEl, () => {
-    step++;
-    renderCurrentCard();
-  });
-}
-
-
 // ================== ПРОВЕРКА ОТВЕТА ==================
 function isCorrectAnswer(raw) {
   const v = normalize(raw);
@@ -278,9 +284,6 @@ function isCorrectAnswer(raw) {
 
 // ================== HELPERS ==================
 function normalize(s){ return (s ?? "").trim().toLowerCase(); }
-function rand(min, max){ return Math.random() * (max - min) + min; }
 
 // старт
 renderCurrentCard();
-
-
