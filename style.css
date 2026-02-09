@@ -199,3 +199,12 @@ input[type="text"]:focus{
   .btn{ width: 100%; text-align:center; align-self: stretch; }
   input[type="text"]{ width: 100%; }
 }
+/* Плавный уход карточки */
+.card.slide-out {
+  animation: slideOut .32s ease forwards;
+}
+
+@keyframes slideOut {
+  to { transform: translateX(-120vw); opacity: 0; }
+}
+
