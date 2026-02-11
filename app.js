@@ -615,7 +615,7 @@ const cards = [
 
       const wrap = document.createElement("div");
       wrap.innerHTML = `
-        <h1>Вот так вот да :/</h1>
+        <h1>Вот так вот да, нууу понятно блин:/</h1>
         <p>Можешь закрыть/обновить вкладку, чтоб произведение остановилось</p>
         
       `;
@@ -639,4 +639,5 @@ function renderCard() {
 
 // старт
 renderCard();
+
 
